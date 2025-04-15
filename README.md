@@ -1,4 +1,4 @@
 # SOC_HW
-[HW1](/SOC/HW1)
+[HW1](/HW1)
 
 
