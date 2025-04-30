@@ -1,39 +1,37 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "xparameters.h"		// 參數集.
-#include "xgpio.h"	// 簡化PS對PL的GPIO操作的函數庫.
 
+#include "xparameters.h"
+#include "xil_io.h"
+#include "sleep.h"
 
-void delay(int dly)
-{
-    int i, j;
-    for (i = 0; i < dly; i++) {
-    	for (j = 0; j < 0xffff; j++) {
-    		;
-        }
-    }
-}
+// AXI Base Address
+#define HW1_BASEADDR XPAR_HW1_0_S00_AXI_BASEADDR
 
-// 主程式.
-int main()
-{
-    XGpio LED_XGpio;		// 宣告一個GPIO用的結構.
-    int LED_num = 0b11000011;	// 宣告一個變數,做運算用暫存用.
+// Register Offset
+#define REG_START 0x00   // slv_reg0 → 控制 start
+#define REG_INDEX 0x04   // slv_reg1 → 回傳 led_index
 
-    XGpio_Initialize(&LED_XGpio, XPAR_AXI_GPIO_0_DEVICE_ID);	// 初始化LED_XGpio.
-    XGpio_SetDataDirection(&LED_XGpio, 1, 0);		// 設置通道.
+int main() {
+    int i;
+    u32 index;
 
-    printf("Start!!!");
+    xil_printf("=== Start LED Test via AXI IP ===\n\r");
 
-    while(1) {
-    	printf("LED_num = 0x%x\n", LED_num);
+    for (i = 0; i < 8; i++) {
+        // 發送 start pulse（寫 1 → 等一下 → 寫 0）
+        Xil_Out32(HW1_BASEADDR + REG_START, 0x01);
+        usleep(1000);  // 等待 1ms
+        Xil_Out32(HW1_BASEADDR + REG_START, 0x00);
 
-    	XGpio_DiscreteWrite(&LED_XGpio, 1, LED_num);		// LED_XGpio通道,送LED_num值進去.
+        // 等待 Verilog 更新 led_index
+        usleep(1000);
 
-    	LED_num = ~LED_num;		// LED_num變數反相.
+        // 讀取目前亮的 LED index
+        index = Xil_In32(HW1_BASEADDR + REG_INDEX);
+        xil_printf("LED Index = %d\n\r", index & 0x7);  
 
-    	delay(100);
+        usleep(700000);  
     }
 
+    xil_printf("=== LED Test Complete ===\n\r");
     return 0;
 }
